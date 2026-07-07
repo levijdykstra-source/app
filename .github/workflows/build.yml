@@ -6,6 +6,9 @@ on:
     branches:
       - claude/keyboard-transcription-app-0druc7
 
+permissions:
+  contents: write
+
 jobs:
   build-windows:
     runs-on: windows-latest
@@ -36,3 +39,29 @@ jobs:
           path: |
             release/*.dmg
             release/*.zip
+
+  release:
+    needs: [build-windows, build-mac]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.1.0
+          name: WhisperKey v0.1.0
+          body: |
+            Standalone installers for WhisperKey — press a hotkey, speak, press
+            again, and it transcribes locally and pastes at your cursor.
+
+            - **Windows**: download `WhisperKey Setup 0.1.0.exe` below and run it.
+              Windows SmartScreen may warn about an unknown publisher (the app is
+              not code-signed) — click **More info → Run anyway**.
+            - **macOS (Apple Silicon)**: download the `.dmg`. Because it is not
+              notarized, right-click the app → **Open** the first time.
+
+            First transcription downloads the Whisper model (~142MB) once, then
+            runs fully offline.
+          files: artifacts/**/*
