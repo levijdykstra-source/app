@@ -7,11 +7,11 @@ export interface WhisperModelOption {
 }
 
 export const WHISPER_MODELS: WhisperModelOption[] = [
-  { id: 'tiny.en', label: 'Tiny (English)', description: 'Fastest, least accurate. ~75MB' },
-  { id: 'base.en', label: 'Base (English)', description: 'Good balance of speed/accuracy. ~142MB' },
-  { id: 'small.en', label: 'Small (English)', description: 'More accurate, slower. ~466MB' },
-  { id: 'base', label: 'Base (Multilingual)', description: 'Multilingual support. ~142MB' },
-  { id: 'small', label: 'Small (Multilingual)', description: 'Multilingual, more accurate. ~466MB' }
+  { id: 'Xenova/whisper-tiny.en', label: 'Tiny (English)', description: 'Fastest, least accurate. ~75MB' },
+  { id: 'Xenova/whisper-base.en', label: 'Base (English)', description: 'Good balance of speed/accuracy. ~142MB' },
+  { id: 'Xenova/whisper-small.en', label: 'Small (English)', description: 'More accurate, slower. ~466MB' },
+  { id: 'Xenova/whisper-base', label: 'Base (Multilingual)', description: 'Multilingual support. ~142MB' },
+  { id: 'Xenova/whisper-small', label: 'Small (Multilingual)', description: 'Multilingual, more accurate. ~466MB' }
 ];
 
 export interface AppSettings {
@@ -23,7 +23,7 @@ export interface AppSettings {
 
 export const DEFAULT_SETTINGS: AppSettings = {
   shortcut: 'CommandOrControl+Shift+Space',
-  modelName: 'base.en',
+  modelName: 'Xenova/whisper-base.en',
   launchAtLogin: false,
   playSounds: true
 };

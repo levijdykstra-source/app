@@ -1,10 +1,11 @@
 # WhisperKey
 
 Press a global hotkey to start recording, press it again to stop — WhisperKey
-transcribes your speech **entirely on-device** with [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
-(via [`nodejs-whisper`](https://github.com/ChetanXpro/nodejs-whisper)) and
-automatically pastes the text wherever your cursor is focused, in any app.
-No cloud APIs, no accounts, no audio ever leaves your machine.
+transcribes your speech **entirely on-device** with a local Whisper model
+running via [Transformers.js](https://github.com/huggingface/transformers.js)
+(ONNX Runtime) and automatically pastes the text wherever your cursor is
+focused, in any app. No cloud APIs, no accounts, no audio ever leaves your
+machine, and no C++ toolchain is required to install it.
 
 Works on macOS and Windows.
 
@@ -14,7 +15,7 @@ Works on macOS and Windows.
    short chime plays and the mic starts recording.
 2. Speak.
 3. Press the same shortcut again — a second chime plays, recording stops, and
-   the audio is transcribed locally by whisper.cpp.
+   the audio is transcribed locally by an on-device Whisper model.
 4. The transcribed text is copied to the clipboard and pasted automatically
    at your current cursor position (via a simulated Cmd+V / Ctrl+V).
 
@@ -24,22 +25,20 @@ settings window (opened from the tray icon).
 ## Requirements
 
 - Node.js 18+ and npm
-- A working C/C++ build toolchain, needed once to compile whisper.cpp when
-  you `npm install`:
-  - **macOS**: Xcode Command Line Tools (`xcode-select --install`)
-  - **Windows**: [MSYS2](https://www.msys2.org/) or the "Desktop development
-    with C++" workload from Visual Studio Build Tools, plus `make`/`cmake`
-    on your `PATH`
 - A microphone, obviously
 
-> Whisper models (e.g. `base.en`, ~142MB) are downloaded once on first use
-> and cached locally by `nodejs-whisper` — after that, transcription works
-> fully offline.
+No native build toolchain is required — `npm install` pulls prebuilt
+platform binaries for ONNX Runtime (inference) from the npm registry, the
+same way any other npm package installs.
+
+> Whisper models (e.g. `whisper-base.en`, ~142MB) are downloaded once from
+> the Hugging Face Hub on first use and cached locally under the app's own
+> data directory — after that, transcription works fully offline.
 
 ## Getting started
 
 ```bash
-npm install     # also compiles whisper.cpp for your platform
+npm install
 npm start        # builds the TypeScript and launches the app
 ```
 
@@ -51,13 +50,13 @@ the system tray/menu bar — click the tray icon any time to reopen settings.
 
 | Model | Size | Notes |
 |---|---|---|
-| `tiny.en` | ~75MB | Fastest, least accurate |
-| `base.en` | ~142MB | Good default balance |
-| `small.en` | ~466MB | More accurate, slower |
-| `base` / `small` | — | Multilingual variants |
+| `whisper-tiny.en` | ~75MB | Fastest, least accurate |
+| `whisper-base.en` | ~142MB | Good default balance |
+| `whisper-small.en` | ~466MB | More accurate, slower |
+| `whisper-base` / `whisper-small` | — | Multilingual variants |
 
 Larger models transcribe more accurately but take longer, especially on
-machines without a GPU. All models run on CPU by default.
+machines without a GPU. All models run on CPU by default via ONNX Runtime.
 
 ## Building installers
 
@@ -86,7 +85,7 @@ or replace those files with real branded artwork before shipping.
 ```
 src/
   main/        Electron main process: tray, global shortcut, settings
-               store, transcription, paste-simulation
+               store, on-device transcription (Transformers.js), paste-simulation
   renderer/    Two windows:
                  - recorder.html/.ts — hidden window that captures mic
                    audio (Web Audio API + AudioWorklet) and encodes 16kHz
@@ -104,11 +103,15 @@ scripts/       Dependency-free generators for placeholder sounds/icons
   previous working shortcut and logs an error — pick a different combination.
 - Only one dictation runs at a time; pressing the shortcut while a
   transcription is in progress is ignored until it finishes.
-- This repository was developed and typechecked in a Linux sandbox that
-  cannot download Electron's binary or compile whisper.cpp (both are blocked
-  by the sandbox's network policy) — so the runtime (mic capture, global
-  shortcuts, paste simulation, actual transcription) has **not** been
-  exercised end-to-end here. `npm run typecheck` passes and `npm run build`
-  produces the expected `dist/` output, but please do a full manual pass
-  (`npm install && npm start`) on a real Mac/Windows machine before relying
-  on it.
+- This repository was developed and typechecked in a Linux sandbox whose
+  network policy blocks `github.com` release downloads and `huggingface.co`
+  entirely, so two things could not be exercised there: Electron's own
+  binary (fetched from GitHub on `npm install`, no way around it — a real
+  install is required to launch the app at all) and live model inference
+  (Whisper weights are fetched from the Hugging Face Hub on first use). All
+  other dependencies — including ONNX Runtime and Transformers.js — install
+  cleanly from the npm registry with no native build step. `npm run
+  typecheck` passes, `npm run build` produces the expected `dist/` output,
+  and the WAV-decoding logic was unit-verified directly, but please do a
+  full manual pass (`npm install && npm start`) on a real Mac/Windows
+  machine before relying on it.
