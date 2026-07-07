@@ -1,0 +1,71 @@
+{
+  "name": "whisperkey",
+  "productName": "WhisperKey",
+  "version": "0.1.0",
+  "description": "Press a hotkey, speak, press it again — WhisperKey transcribes locally with Whisper.cpp and pastes the text at your cursor.",
+  "author": "WhisperKey",
+  "license": "MIT",
+  "private": true,
+  "main": "dist/main/index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-assets.js",
+    "watch": "tsc -p tsconfig.json --watch",
+    "start": "npm run build && electron .",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:all": "npm run build && electron-builder --mac --win",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@nut-tree-fork/nut-js": "^4.2.6",
+    "electron-store": "^8.2.0",
+    "nodejs-whisper": "^0.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "electron": "^31.0.0",
+    "electron-builder": "^26.15.3",
+    "typescript": "^5.5.0"
+  },
+  "build": {
+    "appId": "com.whisperkey.app",
+    "productName": "WhisperKey",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "assets/**/*",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/sounds",
+        "to": "sounds"
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "assets/icons/icon.icns",
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "WhisperKey needs microphone access to transcribe your speech.",
+        "NSAppleEventsUsageDescription": "WhisperKey pastes transcribed text into the app you're using."
+      }
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icons/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
