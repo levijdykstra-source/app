@@ -11,9 +11,9 @@
     "build": "tsc -p tsconfig.json && node scripts/copy-assets.js",
     "watch": "tsc -p tsconfig.json --watch",
     "start": "npm run build && electron .",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:all": "npm run build && electron-builder --mac --win",
+    "dist:mac": "npm run build && electron-builder --mac --publish never",
+    "dist:win": "npm run build && electron-builder --win --publish never",
+    "dist:all": "npm run build && electron-builder --mac --win --publish never",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "postinstall": "electron-builder install-app-deps"
   },
