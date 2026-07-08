@@ -102,6 +102,12 @@ function applyShortcut(accelerator: string): boolean {
   return registerToggleShortcut(accelerator, toggleRecording);
 }
 
+function applyLaunchAtLogin(enabled: boolean): void {
+  // Linux (dev) doesn't support login items via this API; guard to mac/win.
+  if (process.platform !== 'darwin' && process.platform !== 'win32') return;
+  app.setLoginItemSettings({ openAtLogin: enabled });
+}
+
 app.on('second-instance', () => {
   openSettingsWindow();
 });
@@ -124,6 +130,7 @@ app.whenReady().then(() => {
   if (!ok) {
     console.error(`Failed to register shortcut "${settings.shortcut}"`);
   }
+  applyLaunchAtLogin(settings.launchAtLogin);
 
   ipcMain.on(CHANNELS.AUDIO_DATA, (_event, arrayBuffer: ArrayBuffer) => {
     void handleAudioData(Buffer.from(arrayBuffer));
@@ -149,6 +156,10 @@ app.whenReady().then(() => {
         applyShortcut(previousShortcut);
         return getSettings();
       }
+    }
+
+    if (partial.launchAtLogin !== undefined) {
+      applyLaunchAtLogin(updated.launchAtLogin);
     }
 
     return updated;
