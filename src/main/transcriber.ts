@@ -29,8 +29,16 @@ async function getPipeline(modelName: string): Promise<Pipeline> {
  * Transcribes a 16kHz mono WAV file fully on-device via Transformers.js
  * (ONNX Runtime), running a Whisper model. The model is downloaded once on
  * first use and cached locally under the app's userData directory.
+ *
+ * `language` is only honoured for multilingual models: English-only models
+ * (ending in `.en`) throw if `language`/`task` are supplied, so we never pass
+ * them there. Pass 'auto' (or an English-only model) to auto-detect.
  */
-export async function transcribeWav(wavPath: string, modelName: string): Promise<string> {
+export async function transcribeWav(
+  wavPath: string,
+  modelName: string,
+  language = 'auto'
+): Promise<string> {
   if (!fs.existsSync(wavPath)) {
     throw new Error(`Audio file not found: ${wavPath}`);
   }
@@ -40,15 +48,20 @@ export async function transcribeWav(wavPath: string, modelName: string): Promise
   if (samples.length < 1600) {
     return '';
   }
-  const transcribe = await getPipeline(modelName);
-  // Do NOT pass `language`/`task` here: English-only Whisper models (e.g.
-  // whisper-base.en) throw "Cannot specify `task` or `language` for an
-  // English-only model" if either is set. Multilingual models default to
-  // the transcribe task on their own, so omitting these works for both.
-  const result = await transcribe(samples, {
+
+  const options: Record<string, unknown> = {
     chunk_length_s: 30,
     stride_length_s: 5
-  });
+  };
+  const isEnglishOnly = modelName.endsWith('.en');
+  if (!isEnglishOnly && language && language !== 'auto') {
+    // Only multilingual models accept an explicit language/task.
+    options.language = language;
+    options.task = 'transcribe';
+  }
+
+  const transcribe = await getPipeline(modelName);
+  const result = await transcribe(samples, options);
 
   return (result.text ?? '').trim();
 }

@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>WhisperKey Settings</title>
+    <title>WhisperKey</title>
     <link rel="stylesheet" href="settings.css" />
   </head>
   <body>
@@ -29,49 +29,133 @@
         });
       })();
     </script>
-    <main>
-      <h1>WhisperKey</h1>
-      <p class="subtitle">Local, private speech-to-text with a global hotkey.</p>
 
+    <header class="topbar">
+      <div class="brand">🎙 WhisperKey</div>
+      <nav class="tabs">
+        <button class="tab active" data-tab="home" type="button">Home</button>
+        <button class="tab" data-tab="settings" type="button">Settings</button>
+      </nav>
+    </header>
+
+    <main>
       <p id="error-banner" class="error-banner" hidden></p>
 
-      <section>
+      <!-- ===================== HOME ===================== -->
+      <section id="tab-home" class="tab-panel active">
         <button id="record-btn" class="record-btn" type="button">● Record</button>
-        <p class="hint">Click to start recording, click again to stop — or use the shortcut below from any app. The transcribed text is pasted at your cursor.</p>
-      </section>
-
-      <section>
-        <label class="field-label">Recording shortcut</label>
-        <button id="shortcut-btn" class="shortcut-btn" type="button">Loading…</button>
-        <p id="shortcut-warning" class="hint warning" hidden>
-          ⚠️ This shortcut couldn't be registered — it's likely in use by another
-          app or the system. Pick a different combination, or use the Record
-          button above.
-        </p>
-        <p class="hint">Click, then press your desired key combination.</p>
-      </section>
-
-      <section>
-        <label class="field-label" for="model-select">Whisper model</label>
-        <select id="model-select"></select>
-        <p class="hint">Larger models are more accurate but slower and use more memory. Models download once, on first use.</p>
-      </section>
-
-      <section class="checkbox-row">
-        <input type="checkbox" id="play-sounds" />
-        <label for="play-sounds">Play a sound when recording starts/stops</label>
-      </section>
-
-      <section class="checkbox-row">
-        <input type="checkbox" id="launch-at-login" />
-        <label for="launch-at-login">Launch WhisperKey at login</label>
-      </section>
-
-      <section>
-        <label class="field-label">Status</label>
         <p id="status" class="status">Idle</p>
+
+        <div class="cards">
+          <div class="card">
+            <span class="card-k">Microphone</span>
+            <span id="mic-status" class="card-v">—</span>
+          </div>
+          <div class="card">
+            <span class="card-k">Model</span>
+            <span id="home-model" class="card-v">—</span>
+          </div>
+          <div class="card">
+            <span class="card-k">Shortcut</span>
+            <span id="home-shortcut" class="card-v">—</span>
+          </div>
+        </div>
+
+        <div class="history-head">
+          <h2>History</h2>
+          <div class="history-actions">
+            <button id="export-history" class="btn-sm" type="button">Export</button>
+            <button id="clear-history" class="btn-sm danger" type="button">Clear</button>
+          </div>
+        </div>
+        <input id="history-search" class="search" type="search" placeholder="Search transcripts…" />
+        <div id="history-list" class="history-list"></div>
+        <p id="history-empty" class="hint">No transcripts yet. Record something!</p>
+      </section>
+
+      <!-- ===================== SETTINGS ===================== -->
+      <section id="tab-settings" class="tab-panel">
+        <h2>Recording</h2>
+        <section>
+          <label class="field-label" for="device-select">Input device</label>
+          <select id="device-select"></select>
+        </section>
+        <section>
+          <button id="test-mic" class="btn" type="button">Test microphone</button>
+          <div class="meter"><div id="meter-fill" class="meter-fill"></div></div>
+        </section>
+        <section class="checkbox-row">
+          <input type="checkbox" id="noise-suppression" />
+          <label for="noise-suppression">Noise suppression</label>
+        </section>
+        <section class="checkbox-row">
+          <input type="checkbox" id="auto-gain" />
+          <label for="auto-gain">Automatic gain</label>
+        </section>
+        <section class="checkbox-row">
+          <input type="checkbox" id="play-sounds" />
+          <label for="play-sounds">Play start/stop sounds</label>
+        </section>
+        <section class="checkbox-row">
+          <input type="checkbox" id="show-overlay" />
+          <label for="show-overlay">Show floating recording overlay</label>
+        </section>
+
+        <h2>Hotkey</h2>
+        <section>
+          <label class="field-label">Recording shortcut</label>
+          <button id="shortcut-btn" class="shortcut-btn" type="button">Loading…</button>
+          <p id="shortcut-warning" class="hint warning" hidden>
+            ⚠️ This shortcut couldn't be registered — it's likely in use by another
+            app. Pick a different combination, or use the Record button.
+          </p>
+          <div class="row">
+            <p class="hint">Click, then press a key combination.</p>
+            <button id="restore-shortcut" class="btn-sm" type="button">Restore default</button>
+          </div>
+        </section>
+
+        <h2>AI model</h2>
+        <section>
+          <label class="field-label" for="model-select">Transcription model</label>
+          <select id="model-select"></select>
+          <p id="model-meta" class="hint"></p>
+        </section>
+        <section>
+          <label class="field-label" for="language-select">Language</label>
+          <select id="language-select"></select>
+          <p class="hint">Only applies to multilingual models. English-only models always use English.</p>
+        </section>
+
+        <h2>Output</h2>
+        <section>
+          <label class="field-label" for="output-mode">When transcription finishes</label>
+          <select id="output-mode">
+            <option value="paste">Auto-paste at cursor</option>
+            <option value="copy">Copy to clipboard only</option>
+          </select>
+        </section>
+        <section class="checkbox-row">
+          <input type="checkbox" id="add-newline" />
+          <label for="add-newline">Add a newline after the text</label>
+        </section>
+        <section class="checkbox-row">
+          <input type="checkbox" id="save-history" />
+          <label for="save-history">Save transcripts to history</label>
+        </section>
+        <section class="checkbox-row">
+          <input type="checkbox" id="show-notifications" />
+          <label for="show-notifications">Show notifications</label>
+        </section>
+
+        <h2>General</h2>
+        <section class="checkbox-row">
+          <input type="checkbox" id="launch-at-login" />
+          <label for="launch-at-login">Launch WhisperKey at login</label>
+        </section>
       </section>
     </main>
+
     <script src="settings.js"></script>
   </body>
 </html>

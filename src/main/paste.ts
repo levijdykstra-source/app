@@ -1,5 +1,14 @@
 import { clipboard } from 'electron';
 
+/**
+ * Copy-only output mode: leave the transcription on the clipboard for the user
+ * to paste manually, and don't restore the previous contents.
+ */
+export function copyToClipboard(text: string): void {
+  if (!text) return;
+  clipboard.writeText(text);
+}
+
 let nutKeyboard: typeof import('@nut-tree-fork/nut-js').keyboard | null = null;
 let NutKey: typeof import('@nut-tree-fork/nut-js').Key | null = null;
 

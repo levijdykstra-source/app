@@ -1,13 +1,23 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { CHANNELS, AppState } from '../shared/types';
+import { CHANNELS, AppState, HistoryItem } from '../shared/types';
 import { getSettings, setSettings } from './store';
 import { createRecorderWindow } from './recorder-window';
+import { createOverlayWindow, getOverlayWindow, showOverlay, hideOverlay } from './overlay-window';
 import { registerToggleShortcut, unregisterAll } from './shortcut-manager';
 import { createTray, destroyTray, updateTrayState } from './tray';
 import { transcribeWav, tempWavPath } from './transcriber';
-import { pasteAtCursor } from './paste';
+import { pasteAtCursor, copyToClipboard } from './paste';
+import { notify } from './notify';
+import { initLogger, closeLogger, log } from './logger';
+import {
+  getHistory,
+  addHistoryItem,
+  deleteHistoryItem,
+  clearHistory,
+  exportHistory
+} from './history';
 
 // Single instance lock: a hotkey-driven utility app makes no sense running twice.
 const gotLock = app.requestSingleInstanceLock();
@@ -19,6 +29,7 @@ let recorderWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let currentState: AppState = 'idle';
 let shortcutOk = false;
+let recordingStartedAt = 0;
 
 function setState(state: AppState): void {
   currentState = state;
@@ -27,8 +38,9 @@ function setState(state: AppState): void {
 }
 
 function reportError(message: string): void {
-  console.error('WhisperKey error:', message);
+  log('error', message);
   settingsWindow?.webContents.send(CHANNELS.APP_ERROR, message);
+  hideOverlay();
   setState('error');
   setTimeout(() => {
     if (currentState === 'error') setState('idle');
@@ -43,10 +55,12 @@ function openSettingsWindow(): void {
   }
 
   settingsWindow = new BrowserWindow({
-    width: 520,
-    height: 620,
-    resizable: false,
-    title: 'WhisperKey Settings',
+    width: 560,
+    height: 720,
+    minWidth: 480,
+    minHeight: 560,
+    title: 'WhisperKey',
+    backgroundColor: '#1e1f24',
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
@@ -65,6 +79,10 @@ function openSettingsWindow(): void {
   });
 }
 
+function notifyHistoryChanged(): void {
+  settingsWindow?.webContents.send(CHANNELS.HISTORY_CHANGED, getHistory());
+}
+
 function toggleRecording(): void {
   if (currentState === 'idle') {
     beginRecording();
@@ -75,21 +93,44 @@ function toggleRecording(): void {
 }
 
 function beginRecording(): void {
-  setState('recording');
   const settings = getSettings();
-  if (settings.playSounds) {
-    recorderWindow?.webContents.send(CHANNELS.PLAY_SOUND, 'start');
-  }
-  recorderWindow?.webContents.send(CHANNELS.START_RECORDING);
+  recordingStartedAt = Date.now();
+  setState('recording');
+  log('info', 'Recording started');
+
+  if (settings.showOverlay) showOverlay();
+  if (settings.playSounds) recorderWindow?.webContents.send(CHANNELS.PLAY_SOUND, 'start');
+  if (settings.showNotifications) notify('WhisperKey', 'Recording…');
+
+  recorderWindow?.webContents.send(CHANNELS.START_RECORDING, {
+    deviceId: settings.inputDeviceId,
+    noiseSuppression: settings.noiseSuppression,
+    autoGain: settings.autoGain
+  });
 }
 
 function endRecording(): void {
-  setState('transcribing');
   const settings = getSettings();
-  if (settings.playSounds) {
-    recorderWindow?.webContents.send(CHANNELS.PLAY_SOUND, 'stop');
-  }
+  setState('transcribing');
+  log('info', 'Recording stopped, transcribing');
+
+  hideOverlay();
+  if (settings.playSounds) recorderWindow?.webContents.send(CHANNELS.PLAY_SOUND, 'stop');
+
   recorderWindow?.webContents.send(CHANNELS.STOP_RECORDING);
+}
+
+async function deliverText(rawText: string): Promise<void> {
+  const settings = getSettings();
+  let text = rawText;
+  if (settings.addNewline) text += '\n';
+
+  if (settings.outputMode === 'copy') {
+    copyToClipboard(text);
+    if (settings.showNotifications) notify('WhisperKey', 'Transcription copied to clipboard');
+  } else {
+    await pasteAtCursor(text);
+  }
 }
 
 async function handleAudioData(buffer: Buffer): Promise<void> {
@@ -99,14 +140,26 @@ async function handleAudioData(buffer: Buffer): Promise<void> {
     return;
   }
 
+  const durationMs = recordingStartedAt ? Date.now() - recordingStartedAt : 0;
   const wavPath = tempWavPath();
   try {
     fs.writeFileSync(wavPath, buffer);
     const settings = getSettings();
-    const text = await transcribeWav(wavPath, settings.modelName);
+    const text = await transcribeWav(wavPath, settings.modelName, settings.language);
 
     if (text) {
-      await pasteAtCursor(text);
+      await deliverText(text);
+
+      if (settings.saveHistory) {
+        addHistoryItem({ text, model: settings.modelName, durationMs });
+        notifyHistoryChanged();
+      }
+      if (settings.showNotifications && settings.outputMode === 'paste') {
+        notify('WhisperKey', text.length > 80 ? text.slice(0, 77) + '…' : text);
+      }
+      log('info', `Transcribed ${text.length} chars in ${durationMs}ms of audio`);
+    } else {
+      log('info', 'Transcription produced no text (silence?)');
     }
     setState('idle');
   } catch (err) {
@@ -119,6 +172,7 @@ async function handleAudioData(buffer: Buffer): Promise<void> {
 function applyShortcut(accelerator: string): boolean {
   shortcutOk = registerToggleShortcut(accelerator, toggleRecording);
   settingsWindow?.webContents.send(CHANNELS.GET_SHORTCUT_OK, shortcutOk);
+  if (!shortcutOk) log('warn', `Failed to register shortcut "${accelerator}"`);
   return shortcutOk;
 }
 
@@ -137,12 +191,15 @@ app.whenReady().then(() => {
   // before creating a duplicate tray/shortcut/recorder window.
   if (!gotLock) return;
 
+  initLogger();
+
   if (process.platform === 'darwin') {
     app.dock?.hide();
   }
   Menu.setApplicationMenu(null);
 
   recorderWindow = createRecorderWindow();
+  createOverlayWindow();
 
   createTray({
     onOpenSettings: openSettingsWindow,
@@ -150,10 +207,7 @@ app.whenReady().then(() => {
   });
 
   const settings = getSettings();
-  const ok = applyShortcut(settings.shortcut);
-  if (!ok) {
-    console.error(`Failed to register shortcut "${settings.shortcut}"`);
-  }
+  applyShortcut(settings.shortcut);
   applyLaunchAtLogin(settings.launchAtLogin);
 
   ipcMain.on(CHANNELS.AUDIO_DATA, (_event, arrayBuffer: ArrayBuffer) => {
@@ -164,6 +218,12 @@ app.whenReady().then(() => {
     reportError(`Microphone/recording error: ${message}`);
   });
 
+  // Forward live audio level from the recorder to the floating overlay so it
+  // can animate a real waveform.
+  ipcMain.on(CHANNELS.AUDIO_LEVEL, (_event, level: number) => {
+    getOverlayWindow()?.webContents.send(CHANNELS.OVERLAY_LEVEL, level);
+  });
+
   // Let the settings window drive recording via its on-screen button, so the
   // app is fully usable even when the global shortcut can't be registered.
   ipcMain.on(CHANNELS.TOGGLE_RECORDING, () => toggleRecording());
@@ -171,7 +231,6 @@ app.whenReady().then(() => {
   // The settings window queries current state / shortcut status when it opens.
   ipcMain.handle(CHANNELS.GET_STATE, () => currentState);
   ipcMain.handle(CHANNELS.GET_SHORTCUT_OK, () => shortcutOk);
-
   ipcMain.handle(CHANNELS.GET_SETTINGS, () => getSettings());
 
   ipcMain.handle(CHANNELS.SET_SETTINGS, (_event, partial) => {
@@ -195,13 +254,24 @@ app.whenReady().then(() => {
     return updated;
   });
 
+  // History IPC.
+  ipcMain.handle(CHANNELS.HISTORY_GET, () => getHistory());
+  ipcMain.handle(CHANNELS.HISTORY_DELETE, (_event, id: string): HistoryItem[] => {
+    deleteHistoryItem(id);
+    return getHistory();
+  });
+  ipcMain.handle(CHANNELS.HISTORY_CLEAR, (): HistoryItem[] => {
+    clearHistory();
+    return getHistory();
+  });
+  ipcMain.handle(CHANNELS.HISTORY_EXPORT, () => exportHistory());
+
   if (!settings.onboarded) {
     setSettings({ onboarded: true });
   }
 
-  // Show the main window on launch so there's always a visible, usable UI
-  // (with a Record button and the shortcut). The one exception is a silent
-  // auto-start at login, where popping a window would be intrusive.
+  // Show the main window on launch so there's always a visible, usable UI.
+  // The one exception is a silent auto-start at login.
   const openedAtLogin = app.getLoginItemSettings().wasOpenedAtLogin;
   if (!openedAtLogin) {
     openSettingsWindow();
@@ -220,4 +290,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   unregisterAll();
   destroyTray();
+  log('info', 'Shutting down');
+  closeLogger();
 });

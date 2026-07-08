@@ -5,23 +5,35 @@ import { CHANNELS } from '../shared/types';
 
 const TARGET_SAMPLE_RATE = 16000;
 
+interface RecordOptions {
+  deviceId?: string;
+  noiseSuppression?: boolean;
+  autoGain?: boolean;
+}
+
 let audioContext: AudioContext | null = null;
 let mediaStream: MediaStream | null = null;
 let workletNode: AudioWorkletNode | null = null;
 let sourceNode: MediaStreamAudioSourceNode | null = null;
 let capturedFrames: Float32Array[] = [];
+let lastLevelSentAt = 0;
 
-async function startRecording(): Promise<void> {
+async function startRecording(options: RecordOptions = {}): Promise<void> {
   capturedFrames = [];
 
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: 1,
-        echoCancellation: true,
-        noiseSuppression: true
-      }
-    });
+    const audioConstraints: MediaTrackConstraints = {
+      channelCount: 1,
+      echoCancellation: true,
+      noiseSuppression: options.noiseSuppression ?? true,
+      autoGainControl: options.autoGain ?? true
+    };
+    // Use the user's chosen input device when set; otherwise the system default.
+    if (options.deviceId) {
+      audioConstraints.deviceId = { exact: options.deviceId };
+    }
+
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
 
     audioContext = new AudioContext();
     // addModule needs a URL, not a raw filesystem path — a bare Windows path
@@ -32,7 +44,9 @@ async function startRecording(): Promise<void> {
     sourceNode = audioContext.createMediaStreamSource(mediaStream);
     workletNode = new AudioWorkletNode(audioContext, 'pcm-capture-processor');
     workletNode.port.onmessage = (event: MessageEvent<Float32Array>) => {
-      capturedFrames.push(event.data);
+      const frame = event.data;
+      capturedFrames.push(frame);
+      reportLevel(frame);
     };
 
     sourceNode.connect(workletNode);
@@ -40,6 +54,19 @@ async function startRecording(): Promise<void> {
   } catch (err) {
     ipcRenderer.send(CHANNELS.RECORDER_ERROR, err instanceof Error ? err.message : String(err));
   }
+}
+
+/** Throttled RMS level (0..1) sent to the overlay for the live waveform. */
+function reportLevel(frame: Float32Array): void {
+  const now = Date.now();
+  if (now - lastLevelSentAt < 50) return; // ~20 updates/sec is plenty
+  lastLevelSentAt = now;
+
+  let sum = 0;
+  for (let i = 0; i < frame.length; i++) sum += frame[i] * frame[i];
+  const rms = Math.sqrt(sum / frame.length);
+  // Scale up a bit — speech RMS is usually well below 1.
+  ipcRenderer.send(CHANNELS.AUDIO_LEVEL, Math.min(1, rms * 4));
 }
 
 async function stopRecording(): Promise<void> {
@@ -155,8 +182,8 @@ function playSound(name: 'start' | 'stop'): void {
 
 initSoundSources();
 
-ipcRenderer.on(CHANNELS.START_RECORDING, () => {
-  void startRecording();
+ipcRenderer.on(CHANNELS.START_RECORDING, (_event, options?: RecordOptions) => {
+  void startRecording(options);
 });
 
 ipcRenderer.on(CHANNELS.STOP_RECORDING, () => {

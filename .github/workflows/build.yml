@@ -51,37 +51,37 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v2.0.1
-          name: WhisperKey v2.0.1
+          tag_name: v3.0.0
+          name: WhisperKey v3.0.0
           body: |
-            Standalone installers for WhisperKey — press a hotkey (or the
-            on-screen Record button), speak, press again, and it transcribes
-            locally and pastes at your cursor.
+            Local, private voice-to-text: press a hotkey (or the on-screen
+            Record button), speak, press again, and it transcribes offline and
+            pastes at your cursor. Everything runs on your machine — no cloud,
+            no account.
 
-            **v2.0.1 — the app now actually runs**
-            - Fixed the core bug that left the whole UI dead (Record button did
-              nothing, empty settings): Electron sandboxes renderers by default,
-              which disabled the in-page scripts. Now explicitly disabled.
-            - Added visible in-app error messages, so microphone/permission or
-              transcription failures are shown instead of failing silently.
-
-            **Also in v2.x**
-            - On-screen **Record** button, so recording works even if the
-              global shortcut is claimed by another app.
-            - Clear warning when the shortcut can't be registered.
-            - Fixed transcription with the default English model.
-            - Fixed recording and sounds on Windows, and reliable microphone
-              access in the packaged app.
-            - The window now shows on launch, and only stays quiet when
-              auto-started at login.
+            **New in v3.0.0**
+            - **Floating recording overlay** — a draggable, always-on-top pill
+              with a live waveform and timer while you dictate.
+            - **Transcription history** — every dictation is saved locally;
+              search, copy, delete, or export to a text file.
+            - **Native notifications** for recording/transcription/errors.
+            - **Output modes** — auto-paste at cursor or copy-to-clipboard only,
+              with an optional trailing newline.
+            - **Microphone picker + live test meter**, noise suppression and
+              auto-gain toggles.
+            - **Expanded model picker** (Tiny → Medium, English & multilingual)
+              showing download size, RAM, and speed, plus **language selection**
+              for multilingual models.
+            - Redesigned **Home + Settings** tabbed interface, light/dark aware.
+            - Local **debug logging** under the app's data folder.
 
             **Install**
-            - **Windows**: download `WhisperKey Setup 2.0.1.exe` below and run
+            - **Windows**: download `WhisperKey Setup 3.0.0.exe` below and run
               it. Windows SmartScreen may warn about an unknown publisher (the
               app is not code-signed) — click **More info → Run anyway**.
             - **macOS (Apple Silicon)**: download the `.dmg`. Because it is not
               notarized, right-click the app → **Open** the first time.
 
-            First transcription downloads the Whisper model (~142MB) once, then
+            First transcription downloads the chosen Whisper model once, then
             runs fully offline.
           files: artifacts/**/*
