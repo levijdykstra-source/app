@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - claude/keyboard-transcription-app-0druc7
+      - claude/keyboard-shortcut-transcription-app-sfpeoc
 
 permissions:
   contents: write
