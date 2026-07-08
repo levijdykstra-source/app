@@ -44,6 +44,7 @@ export const CHANNELS = {
   RECORDER_ERROR: 'recorder:error',
   PLAY_SOUND: 'sound:play',
   STATE_CHANGED: 'app:state-changed',
+  APP_ERROR: 'app:error',
   TOGGLE_RECORDING: 'app:toggle-recording',
   GET_STATE: 'app:get-state',
   GET_SHORTCUT_OK: 'app:get-shortcut-ok',

@@ -8,8 +8,19 @@ const modelSelect = document.getElementById('model-select') as HTMLSelectElement
 const playSoundsCheckbox = document.getElementById('play-sounds') as HTMLInputElement;
 const launchAtLoginCheckbox = document.getElementById('launch-at-login') as HTMLInputElement;
 const statusEl = document.getElementById('status') as HTMLParagraphElement;
+const errorBanner = document.getElementById('error-banner') as HTMLParagraphElement;
 
 let listeningForShortcut = false;
+
+function showError(message: string): void {
+  errorBanner.hidden = false;
+  errorBanner.textContent = `⚠️ ${message}`;
+}
+
+function clearError(): void {
+  errorBanner.hidden = true;
+  errorBanner.textContent = '';
+}
 
 function renderState(state: AppState): void {
   const labels: Record<AppState, string> = {
@@ -19,6 +30,8 @@ function renderState(state: AppState): void {
     error: 'Something went wrong — try again'
   };
   statusEl.textContent = labels[state];
+
+  if (state === 'recording') clearError();
 
   recordBtn.classList.toggle('recording', state === 'recording');
   recordBtn.classList.toggle('busy', state === 'transcribing');
@@ -38,6 +51,7 @@ function renderShortcutOk(ok: boolean): void {
 }
 
 recordBtn.addEventListener('click', () => {
+  clearError();
   ipcRenderer.send(CHANNELS.TOGGLE_RECORDING);
 });
 
@@ -173,6 +187,10 @@ ipcRenderer.on(CHANNELS.STATE_CHANGED, (_event, state: AppState) => {
 
 ipcRenderer.on(CHANNELS.GET_SHORTCUT_OK, (_event, ok: boolean) => {
   renderShortcutOk(ok);
+});
+
+ipcRenderer.on(CHANNELS.APP_ERROR, (_event, message: string) => {
+  showError(message);
 });
 
 async function init(): Promise<void> {

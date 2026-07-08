@@ -92,6 +92,16 @@ section {
   color: #f0a24a;
 }
 
+.error-banner {
+  margin: 0 0 18px;
+  padding: 10px 12px;
+  font-size: 13px;
+  background: #3a2326;
+  color: #ff9ea2;
+  border: 1px solid #6e3236;
+  border-radius: 8px;
+}
+
 .shortcut-btn.listening {
   border-color: var(--accent);
   color: var(--accent);

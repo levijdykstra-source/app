@@ -6,9 +6,34 @@
     <link rel="stylesheet" href="settings.css" />
   </head>
   <body>
+    <!--
+      Plain-JS error catcher. Runs before settings.js and uses no Node APIs, so
+      even if the main script fails to load, uncaught errors become visible
+      instead of leaving a silently dead UI.
+    -->
+    <script>
+      (function () {
+        function show(msg) {
+          var el = document.getElementById('error-banner');
+          if (el) {
+            el.hidden = false;
+            el.textContent = '⚠️ ' + msg;
+          }
+        }
+        window.addEventListener('error', function (e) {
+          show((e && e.message) || 'Unknown error');
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          var r = e && e.reason;
+          show((r && r.message) || String(r) || 'Unhandled rejection');
+        });
+      })();
+    </script>
     <main>
       <h1>WhisperKey</h1>
       <p class="subtitle">Local, private speech-to-text with a global hotkey.</p>
+
+      <p id="error-banner" class="error-banner" hidden></p>
 
       <section>
         <button id="record-btn" class="record-btn" type="button">● Record</button>

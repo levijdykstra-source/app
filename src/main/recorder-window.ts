@@ -13,6 +13,10 @@ export function createRecorderWindow(): BrowserWindow {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
+      // Required: since Electron 20 renderers are sandboxed by default, which
+      // disables Node.js (require/__dirname) in the page even with
+      // nodeIntegration on. Without this the recorder script never loads.
+      sandbox: false,
       backgroundThrottling: false
     }
   });

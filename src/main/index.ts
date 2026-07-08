@@ -26,6 +26,15 @@ function setState(state: AppState): void {
   settingsWindow?.webContents.send(CHANNELS.STATE_CHANGED, state);
 }
 
+function reportError(message: string): void {
+  console.error('WhisperKey error:', message);
+  settingsWindow?.webContents.send(CHANNELS.APP_ERROR, message);
+  setState('error');
+  setTimeout(() => {
+    if (currentState === 'error') setState('idle');
+  }, 4000);
+}
+
 function openSettingsWindow(): void {
   if (settingsWindow) {
     settingsWindow.show();
@@ -40,7 +49,11 @@ function openSettingsWindow(): void {
     title: 'WhisperKey Settings',
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: false
+      contextIsolation: false,
+      // Required: renderers are sandboxed by default since Electron 20, which
+      // disables Node.js in the page and would make settings.js fail to load
+      // (dead buttons, empty UI). See recorder-window.ts for the same fix.
+      sandbox: false
     }
   });
 
@@ -97,9 +110,7 @@ async function handleAudioData(buffer: Buffer): Promise<void> {
     }
     setState('idle');
   } catch (err) {
-    console.error('Transcription failed:', err);
-    setState('error');
-    setTimeout(() => setState('idle'), 2500);
+    reportError(`Transcription failed: ${err instanceof Error ? err.message : String(err)}`);
   } finally {
     fs.unlink(wavPath, () => undefined);
   }
@@ -150,9 +161,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.on(CHANNELS.RECORDER_ERROR, (_event, message: string) => {
-    console.error('Recorder error:', message);
-    setState('error');
-    setTimeout(() => setState('idle'), 2500);
+    reportError(`Microphone/recording error: ${message}`);
   });
 
   // Let the settings window drive recording via its on-screen button, so the
