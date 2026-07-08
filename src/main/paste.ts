@@ -24,19 +24,19 @@ export async function pasteAtCursor(text: string): Promise<void> {
   const previousClipboard = clipboard.readText();
   clipboard.writeText(text);
 
-  try {
-    const { keyboard, Key } = await loadNut();
-    if (!keyboard || !Key) throw new Error('nut-js unavailable');
+  const { keyboard, Key } = await loadNut();
+  if (!keyboard || !Key) throw new Error('nut-js unavailable');
 
-    const modifier = process.platform === 'darwin' ? Key.LeftSuper : Key.LeftControl;
+  const modifier = process.platform === 'darwin' ? Key.LeftSuper : Key.LeftControl;
 
-    await keyboard.pressKey(modifier, Key.V);
-    await keyboard.releaseKey(modifier, Key.V);
-  } finally {
-    // Restore the user's previous clipboard contents shortly after pasting,
-    // so we don't clobber what they had copied before recording.
-    setTimeout(() => {
-      clipboard.writeText(previousClipboard);
-    }, 1500);
-  }
+  await keyboard.pressKey(modifier, Key.V);
+  await keyboard.releaseKey(modifier, Key.V);
+
+  // Only restore the previous clipboard once we know the paste keystroke was
+  // actually sent. If simulation had thrown (e.g. macOS Accessibility not
+  // granted), we deliberately leave the transcription on the clipboard so the
+  // user can paste it manually rather than silently losing it.
+  setTimeout(() => {
+    clipboard.writeText(previousClipboard);
+  }, 1500);
 }

@@ -11,7 +11,8 @@ export function getSettings(): AppSettings {
     shortcut: store.get('shortcut'),
     modelName: store.get('modelName'),
     launchAtLogin: store.get('launchAtLogin'),
-    playSounds: store.get('playSounds')
+    playSounds: store.get('playSounds'),
+    onboarded: store.get('onboarded')
   };
 }
 

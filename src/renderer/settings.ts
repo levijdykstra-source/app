@@ -113,6 +113,11 @@ window.addEventListener('keydown', async (e) => {
   const updated: AppSettings = await ipcRenderer.invoke(CHANNELS.SET_SETTINGS, {
     shortcut: accelerator
   });
+  // The main process reverts to the previous shortcut if the requested one
+  // couldn't be registered (already claimed by another app) — tell the user.
+  if (updated.shortcut !== accelerator) {
+    statusEl.textContent = `"${accelerator}" is unavailable (in use by another app). Kept "${updated.shortcut}".`;
+  }
   renderSettings(updated);
 });
 

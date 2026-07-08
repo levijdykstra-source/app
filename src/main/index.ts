@@ -79,6 +79,12 @@ function endRecording(): void {
 }
 
 async function handleAudioData(buffer: Buffer): Promise<void> {
+  // A WAV header alone is 44 bytes; anything at or below that carries no audio.
+  if (buffer.length <= 44) {
+    setState('idle');
+    return;
+  }
+
   const wavPath = tempWavPath();
   try {
     fs.writeFileSync(wavPath, buffer);
@@ -113,6 +119,10 @@ app.on('second-instance', () => {
 });
 
 app.whenReady().then(() => {
+  // If another instance already holds the lock, this one is redundant — bail
+  // before creating a duplicate tray/shortcut/recorder window.
+  if (!gotLock) return;
+
   if (process.platform === 'darwin') {
     app.dock?.hide();
   }
@@ -165,8 +175,13 @@ app.whenReady().then(() => {
     return updated;
   });
 
-  // Open settings on first launch so the user can see/change the default shortcut.
-  openSettingsWindow();
+  // Open settings on first launch only, so the user can see/change the default
+  // shortcut. On subsequent launches (including auto-start at login) it stays
+  // quietly in the tray.
+  if (!settings.onboarded) {
+    openSettingsWindow();
+    setSettings({ onboarded: true });
+  }
 });
 
 app.on('window-all-closed', () => {

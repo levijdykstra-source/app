@@ -1,5 +1,6 @@
 import { ipcRenderer } from 'electron';
 import * as path from 'path';
+import * as url from 'url';
 import { CHANNELS } from '../shared/types';
 
 const TARGET_SAMPLE_RATE = 16000;
@@ -23,7 +24,10 @@ async function startRecording(): Promise<void> {
     });
 
     audioContext = new AudioContext();
-    await audioContext.audioWorklet.addModule(path.join(__dirname, 'recorder-worklet.js'));
+    // addModule needs a URL, not a raw filesystem path — a bare Windows path
+    // like "C:\...\recorder-worklet.js" is not a valid URL and fails to load.
+    const workletUrl = url.pathToFileURL(path.join(__dirname, 'recorder-worklet.js')).href;
+    await audioContext.audioWorklet.addModule(workletUrl);
 
     sourceNode = audioContext.createMediaStreamSource(mediaStream);
     workletNode = new AudioWorkletNode(audioContext, 'pcm-capture-processor');
@@ -47,14 +51,23 @@ async function stopRecording(): Promise<void> {
   await audioContext?.close();
 
   const merged = mergeFrames(capturedFrames);
-  const resampled = resampleTo16k(merged, sourceSampleRate);
-  const wavBuffer = encodeWav(resampled, TARGET_SAMPLE_RATE);
 
   audioContext = null;
   mediaStream = null;
   workletNode = null;
   sourceNode = null;
   capturedFrames = [];
+
+  // Nothing was captured (mic never started, permission denied mid-flight, or
+  // an instant start/stop). Report an error so the main process resets its
+  // state instead of trying to transcribe silence — or worse, waiting forever.
+  if (merged.length === 0) {
+    ipcRenderer.send(CHANNELS.RECORDER_ERROR, 'No audio was captured');
+    return;
+  }
+
+  const resampled = resampleTo16k(merged, sourceSampleRate);
+  const wavBuffer = encodeWav(resampled, TARGET_SAMPLE_RATE);
 
   ipcRenderer.send(CHANNELS.AUDIO_DATA, wavBuffer);
 }
@@ -128,8 +141,9 @@ function initSoundSources(): void {
 
   const startAudio = document.getElementById('sound-start') as HTMLAudioElement | null;
   const stopAudio = document.getElementById('sound-stop') as HTMLAudioElement | null;
-  if (startAudio) startAudio.src = path.join(soundsDir, 'start.wav');
-  if (stopAudio) stopAudio.src = path.join(soundsDir, 'stop.wav');
+  // Use file:// URLs so the paths resolve correctly on Windows too.
+  if (startAudio) startAudio.src = url.pathToFileURL(path.join(soundsDir, 'start.wav')).href;
+  if (stopAudio) stopAudio.src = url.pathToFileURL(path.join(soundsDir, 'stop.wav')).href;
 }
 
 function playSound(name: 'start' | 'stop'): void {

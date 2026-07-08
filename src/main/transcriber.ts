@@ -36,10 +36,16 @@ export async function transcribeWav(wavPath: string, modelName: string): Promise
   }
 
   const samples = readWavAsFloat32(wavPath);
+  // Whisper chokes on empty/near-empty input; skip anything under ~0.1s.
+  if (samples.length < 1600) {
+    return '';
+  }
   const transcribe = await getPipeline(modelName);
+  // Do NOT pass `language`/`task` here: English-only Whisper models (e.g.
+  // whisper-base.en) throw "Cannot specify `task` or `language` for an
+  // English-only model" if either is set. Multilingual models default to
+  // the transcribe task on their own, so omitting these works for both.
   const result = await transcribe(samples, {
-    language: null,
-    task: 'transcribe',
     chunk_length_s: 30,
     stride_length_s: 5
   });

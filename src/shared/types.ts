@@ -19,13 +19,17 @@ export interface AppSettings {
   modelName: string;
   launchAtLogin: boolean;
   playSounds: boolean;
+  // Internal: whether the one-time onboarding settings window has been shown.
+  // Not exposed in the settings UI.
+  onboarded: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   shortcut: 'CommandOrControl+Shift+Space',
   modelName: 'Xenova/whisper-base.en',
   launchAtLogin: false,
-  playSounds: true
+  playSounds: true,
+  onboarded: false
 };
 
 export interface IpcChannels {
