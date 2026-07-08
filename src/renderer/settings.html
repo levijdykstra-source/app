@@ -11,9 +11,19 @@
       <p class="subtitle">Local, private speech-to-text with a global hotkey.</p>
 
       <section>
+        <button id="record-btn" class="record-btn" type="button">● Record</button>
+        <p class="hint">Click to start recording, click again to stop — or use the shortcut below from any app. The transcribed text is pasted at your cursor.</p>
+      </section>
+
+      <section>
         <label class="field-label">Recording shortcut</label>
         <button id="shortcut-btn" class="shortcut-btn" type="button">Loading…</button>
-        <p class="hint">Click, then press your desired key combination. Press once to start recording, again to stop.</p>
+        <p id="shortcut-warning" class="hint warning" hidden>
+          ⚠️ This shortcut couldn't be registered — it's likely in use by another
+          app or the system. Pick a different combination, or use the Record
+          button above.
+        </p>
+        <p class="hint">Click, then press your desired key combination.</p>
       </section>
 
       <section>

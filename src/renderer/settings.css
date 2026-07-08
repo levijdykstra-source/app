@@ -46,6 +46,36 @@ section {
   margin-bottom: 6px;
 }
 
+.record-btn {
+  width: 100%;
+  padding: 14px 12px;
+  font-size: 16px;
+  font-weight: 600;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.record-btn:hover {
+  opacity: 0.92;
+}
+
+.record-btn.recording {
+  background: #e5484d;
+}
+
+.record-btn.busy {
+  background: #55565f;
+  cursor: default;
+}
+
+.record-btn:disabled {
+  cursor: default;
+}
+
 .shortcut-btn {
   width: 100%;
   padding: 10px 12px;
@@ -56,6 +86,10 @@ section {
   border-radius: 8px;
   cursor: pointer;
   text-align: left;
+}
+
+.hint.warning {
+  color: #f0a24a;
 }
 
 .shortcut-btn.listening {

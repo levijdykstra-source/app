@@ -18,6 +18,7 @@ if (!gotLock) {
 let recorderWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
 let currentState: AppState = 'idle';
+let shortcutOk = false;
 
 function setState(state: AppState): void {
   currentState = state;
@@ -105,7 +106,9 @@ async function handleAudioData(buffer: Buffer): Promise<void> {
 }
 
 function applyShortcut(accelerator: string): boolean {
-  return registerToggleShortcut(accelerator, toggleRecording);
+  shortcutOk = registerToggleShortcut(accelerator, toggleRecording);
+  settingsWindow?.webContents.send(CHANNELS.GET_SHORTCUT_OK, shortcutOk);
+  return shortcutOk;
 }
 
 function applyLaunchAtLogin(enabled: boolean): void {
@@ -152,6 +155,14 @@ app.whenReady().then(() => {
     setTimeout(() => setState('idle'), 2500);
   });
 
+  // Let the settings window drive recording via its on-screen button, so the
+  // app is fully usable even when the global shortcut can't be registered.
+  ipcMain.on(CHANNELS.TOGGLE_RECORDING, () => toggleRecording());
+
+  // The settings window queries current state / shortcut status when it opens.
+  ipcMain.handle(CHANNELS.GET_STATE, () => currentState);
+  ipcMain.handle(CHANNELS.GET_SHORTCUT_OK, () => shortcutOk);
+
   ipcMain.handle(CHANNELS.GET_SETTINGS, () => getSettings());
 
   ipcMain.handle(CHANNELS.SET_SETTINGS, (_event, partial) => {
@@ -175,13 +186,22 @@ app.whenReady().then(() => {
     return updated;
   });
 
-  // Open settings on first launch only, so the user can see/change the default
-  // shortcut. On subsequent launches (including auto-start at login) it stays
-  // quietly in the tray.
   if (!settings.onboarded) {
-    openSettingsWindow();
     setSettings({ onboarded: true });
   }
+
+  // Show the main window on launch so there's always a visible, usable UI
+  // (with a Record button and the shortcut). The one exception is a silent
+  // auto-start at login, where popping a window would be intrusive.
+  const openedAtLogin = app.getLoginItemSettings().wasOpenedAtLogin;
+  if (!openedAtLogin) {
+    openSettingsWindow();
+  }
+});
+
+// Clicking the dock icon (macOS) or relaunching reopens the window.
+app.on('activate', () => {
+  openSettingsWindow();
 });
 
 app.on('window-all-closed', () => {

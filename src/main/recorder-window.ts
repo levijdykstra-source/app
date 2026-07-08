@@ -17,6 +17,17 @@ export function createRecorderWindow(): BrowserWindow {
     }
   });
 
+  // Grant microphone access to our own renderer. Without an explicit handler,
+  // Electron can deny getUserMedia in a packaged app, so recording never
+  // starts. We only ever request the mic, so approve media and deny the rest.
+  const isMediaPermission = (permission: string): boolean =>
+    permission === 'media' || permission === 'audioCapture' || permission === 'microphone';
+
+  win.webContents.session.setPermissionRequestHandler((_wc, permission, callback) => {
+    callback(isMediaPermission(permission));
+  });
+  win.webContents.session.setPermissionCheckHandler((_wc, permission) => isMediaPermission(permission));
+
   const htmlPath = path.join(__dirname, '..', 'renderer', 'recorder.html');
   const targetUrl = url.format({
     pathname: htmlPath,

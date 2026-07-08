@@ -1,13 +1,45 @@
 import { ipcRenderer } from 'electron';
 import { AppSettings, AppState, CHANNELS, WHISPER_MODELS } from '../shared/types';
 
+const recordBtn = document.getElementById('record-btn') as HTMLButtonElement;
 const shortcutBtn = document.getElementById('shortcut-btn') as HTMLButtonElement;
+const shortcutWarning = document.getElementById('shortcut-warning') as HTMLParagraphElement;
 const modelSelect = document.getElementById('model-select') as HTMLSelectElement;
 const playSoundsCheckbox = document.getElementById('play-sounds') as HTMLInputElement;
 const launchAtLoginCheckbox = document.getElementById('launch-at-login') as HTMLInputElement;
 const statusEl = document.getElementById('status') as HTMLParagraphElement;
 
 let listeningForShortcut = false;
+
+function renderState(state: AppState): void {
+  const labels: Record<AppState, string> = {
+    idle: 'Idle — press Record or your shortcut to start',
+    recording: 'Recording… press Record or the shortcut again to stop',
+    transcribing: 'Transcribing locally…',
+    error: 'Something went wrong — try again'
+  };
+  statusEl.textContent = labels[state];
+
+  recordBtn.classList.toggle('recording', state === 'recording');
+  recordBtn.classList.toggle('busy', state === 'transcribing');
+  recordBtn.disabled = state === 'transcribing';
+
+  if (state === 'recording') {
+    recordBtn.textContent = '■ Stop';
+  } else if (state === 'transcribing') {
+    recordBtn.textContent = 'Transcribing…';
+  } else {
+    recordBtn.textContent = '● Record';
+  }
+}
+
+function renderShortcutOk(ok: boolean): void {
+  shortcutWarning.hidden = ok;
+}
+
+recordBtn.addEventListener('click', () => {
+  ipcRenderer.send(CHANNELS.TOGGLE_RECORDING);
+});
 
 function populateModels(selected: string): void {
   modelSelect.innerHTML = '';
@@ -136,13 +168,19 @@ launchAtLoginCheckbox.addEventListener('change', async () => {
 });
 
 ipcRenderer.on(CHANNELS.STATE_CHANGED, (_event, state: AppState) => {
-  const labels: Record<AppState, string> = {
-    idle: 'Idle — press your shortcut to start recording',
-    recording: 'Recording… press the shortcut again to stop',
-    transcribing: 'Transcribing locally…',
-    error: 'Something went wrong — check the tray menu'
-  };
-  statusEl.textContent = labels[state];
+  renderState(state);
 });
 
-void loadSettings();
+ipcRenderer.on(CHANNELS.GET_SHORTCUT_OK, (_event, ok: boolean) => {
+  renderShortcutOk(ok);
+});
+
+async function init(): Promise<void> {
+  await loadSettings();
+  const state: AppState = await ipcRenderer.invoke(CHANNELS.GET_STATE);
+  renderState(state);
+  const shortcutOk: boolean = await ipcRenderer.invoke(CHANNELS.GET_SHORTCUT_OK);
+  renderShortcutOk(shortcutOk);
+}
+
+void init();

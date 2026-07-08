@@ -19,8 +19,13 @@ Works on macOS and Windows.
 4. The transcribed text is copied to the clipboard and pasted automatically
    at your current cursor position (via a simulated Cmd+V / Ctrl+V).
 
+You don't have to use the keyboard at all: the settings window also has a
+**Record** button that starts/stops a dictation directly, which is handy if
+your chosen shortcut is claimed by another app. The window shows a warning if
+the shortcut couldn't be registered so you can pick a different one.
+
 The shortcut, Whisper model, and other preferences are configurable from the
-settings window (opened from the tray icon).
+settings window (opened on launch, or any time from the tray icon).
 
 ## Requirements
 
