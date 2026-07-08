@@ -1,7 +1,7 @@
 {
   "name": "whisperkey",
   "productName": "WhisperKey",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "description": "Press a hotkey, speak, press it again — WhisperKey transcribes locally with Whisper.cpp and pastes the text at your cursor.",
   "author": "WhisperKey",
   "license": "MIT",

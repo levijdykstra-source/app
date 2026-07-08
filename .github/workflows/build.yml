@@ -51,15 +51,28 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v0.1.0
-          name: WhisperKey v0.1.0
+          tag_name: v2.0.0
+          name: WhisperKey v2.0.0
           body: |
-            Standalone installers for WhisperKey — press a hotkey, speak, press
-            again, and it transcribes locally and pastes at your cursor.
+            Standalone installers for WhisperKey — press a hotkey (or the
+            on-screen Record button), speak, press again, and it transcribes
+            locally and pastes at your cursor.
 
-            - **Windows**: download `WhisperKey Setup 0.1.0.exe` below and run it.
-              Windows SmartScreen may warn about an unknown publisher (the app is
-              not code-signed) — click **More info → Run anyway**.
+            **What's new in v2.0.0**
+            - On-screen **Record** button, so recording works even if the
+              global shortcut is claimed by another app.
+            - Clear warning when the shortcut can't be registered.
+            - Fixed transcription with the default English model (it previously
+              failed every time).
+            - Fixed recording and sounds on Windows, and reliable microphone
+              access in the packaged app.
+            - The window now shows on launch, and only stays quiet when
+              auto-started at login.
+
+            **Install**
+            - **Windows**: download `WhisperKey Setup 2.0.0.exe` below and run
+              it. Windows SmartScreen may warn about an unknown publisher (the
+              app is not code-signed) — click **More info → Run anyway**.
             - **macOS (Apple Silicon)**: download the `.dmg`. Because it is not
               notarized, right-click the app → **Open** the first time.
 
