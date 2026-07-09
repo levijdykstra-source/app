@@ -415,6 +415,9 @@ api.on(CHANNELS.HISTORY_CHANGED, (items: HistoryItem[]) => {
 
 // ---- init ---------------------------------------------------------------
 async function init(): Promise<void> {
+  const versionEl = document.getElementById('app-version');
+  if (versionEl) versionEl.textContent = `v${__APP_VERSION__}`;
+
   setupTabs();
   currentSettings = await api.invoke(CHANNELS.GET_SETTINGS);
   await populateDevices(currentSettings.inputDeviceId);

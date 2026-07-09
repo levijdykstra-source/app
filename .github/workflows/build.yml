@@ -51,19 +51,25 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v3.0.1
-          name: WhisperKey v3.0.1
+          tag_name: v3.0.2
+          name: WhisperKey v3.0.2
           body: |
             Local, private voice-to-text: press a hotkey (or the on-screen
             Record button), speak, press again, and it transcribes offline and
             pastes at your cursor. Everything runs on your machine — no cloud,
             no account.
 
-            **Fixed in v3.0.1**
+            > The app now shows its version (e.g. **v3.0.2**) in the window
+            > header — check it there to confirm you're on the fixed build.
+
+            **Fixed in v3.0.1 / v3.0.2**
             - Fixed `Uncaught ReferenceError: exports is not defined` that left
               the UI dead. The renderer is now bundled as plain browser code
               (no CommonJS) and talks to Electron through a secure preload
               bridge — no more reliance on Node.js running inside the page.
+            - v3.0.2 adds a build-time guard that fails the build if any
+              renderer bundle ever contains CommonJS, and shows the running
+              version in the UI header.
 
             **From v3.0.0**
             - **Floating recording overlay** — a draggable, always-on-top pill
@@ -82,7 +88,7 @@ jobs:
             - Local **debug logging** under the app's data folder.
 
             **Install**
-            - **Windows**: download `WhisperKey Setup 3.0.1.exe` below and run
+            - **Windows**: download `WhisperKey Setup 3.0.2.exe` below and run
               it. Windows SmartScreen may warn about an unknown publisher (the
               app is not code-signed) — click **More info → Run anyway**.
             - **macOS (Apple Silicon)**: download the `.dmg`. Because it is not

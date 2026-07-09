@@ -1,5 +1,6 @@
 const path = require('path');
 const esbuild = require('esbuild');
+const pkg = require('../package.json');
 
 // Bundle each renderer entry into a self-contained browser IIFE. This is the
 // key fix for "exports is not defined": the output has no CommonJS module
@@ -19,6 +20,9 @@ esbuild
     platform: 'browser',
     target: 'es2020',
     sourcemap: true,
+    // Bake the app version into the bundle so the UI can show which build is
+    // running — makes "am I on the fixed version?" unambiguous.
+    define: { __APP_VERSION__: JSON.stringify(pkg.version) },
     logLevel: 'info'
   })
   .then(() => console.log('Bundled renderer entries into dist/renderer/'))

@@ -3,6 +3,9 @@
 export {};
 
 declare global {
+  // Injected at build time by esbuild's `define` (see scripts/build-renderer.js).
+  const __APP_VERSION__: string;
+
   interface Window {
     whisper: {
       invoke(channel: string, ...args: unknown[]): Promise<any>;

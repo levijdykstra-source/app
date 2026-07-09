@@ -38,6 +38,12 @@ body {
   font-size: 15px;
 }
 
+.version {
+  font-weight: 500;
+  font-size: 11px;
+  color: var(--muted);
+}
+
 .tabs {
   display: flex;
   gap: 4px;
