@@ -1,4 +1,3 @@
-import { ipcRenderer, clipboard } from 'electron';
 import {
   AppSettings,
   AppState,
@@ -9,6 +8,8 @@ import {
   HistoryItem,
   DEFAULT_SETTINGS
 } from '../shared/types';
+
+const api = window.whisper;
 
 // ---- element refs -------------------------------------------------------
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
@@ -76,7 +77,7 @@ function setupTabs(): void {
 
 // ---- settings persistence ----------------------------------------------
 async function save(partial: Partial<AppSettings>): Promise<void> {
-  currentSettings = await ipcRenderer.invoke(CHANNELS.SET_SETTINGS, partial);
+  currentSettings = await api.invoke(CHANNELS.SET_SETTINGS, partial);
   renderSettings(currentSettings);
 }
 
@@ -211,7 +212,7 @@ function renderHistory(): void {
     copyBtn.className = 'btn-sm';
     copyBtn.textContent = 'Copy';
     copyBtn.addEventListener('click', () => {
-      clipboard.writeText(item.text);
+      api.clipboardWrite(item.text);
       copyBtn.textContent = 'Copied!';
       setTimeout(() => (copyBtn.textContent = 'Copy'), 1200);
     });
@@ -220,7 +221,7 @@ function renderHistory(): void {
     delBtn.className = 'btn-sm danger';
     delBtn.textContent = 'Delete';
     delBtn.addEventListener('click', async () => {
-      historyItems = await ipcRenderer.invoke(CHANNELS.HISTORY_DELETE, item.id);
+      historyItems = await api.invoke(CHANNELS.HISTORY_DELETE, item.id);
       renderHistory();
     });
 
@@ -237,7 +238,7 @@ function renderHistory(): void {
 }
 
 async function loadHistory(): Promise<void> {
-  historyItems = await ipcRenderer.invoke(CHANNELS.HISTORY_GET);
+  historyItems = await api.invoke(CHANNELS.HISTORY_GET);
   renderHistory();
 }
 
@@ -344,16 +345,16 @@ function stopListeningForShortcut(): void {
 // ---- wire up events -----------------------------------------------------
 recordBtn.addEventListener('click', () => {
   clearError();
-  ipcRenderer.send(CHANNELS.TOGGLE_RECORDING);
+  api.send(CHANNELS.TOGGLE_RECORDING);
 });
 
 historySearchEl.addEventListener('input', renderHistory);
 exportHistoryBtn.addEventListener('click', async () => {
-  const saved = await ipcRenderer.invoke(CHANNELS.HISTORY_EXPORT);
+  const saved = await api.invoke(CHANNELS.HISTORY_EXPORT);
   if (saved) statusEl.textContent = `Exported to ${saved}`;
 });
 clearHistoryBtn.addEventListener('click', async () => {
-  historyItems = await ipcRenderer.invoke(CHANNELS.HISTORY_CLEAR);
+  historyItems = await api.invoke(CHANNELS.HISTORY_CLEAR);
   renderHistory();
 });
 
@@ -393,7 +394,7 @@ window.addEventListener('keydown', async (e) => {
   if (!accelerator) return;
 
   stopListeningForShortcut();
-  const updated: AppSettings = await ipcRenderer.invoke(CHANNELS.SET_SETTINGS, {
+  const updated: AppSettings = await api.invoke(CHANNELS.SET_SETTINGS, {
     shortcut: accelerator
   });
   if (updated.shortcut !== accelerator) {
@@ -404,10 +405,10 @@ window.addEventListener('keydown', async (e) => {
 });
 
 // ---- IPC listeners ------------------------------------------------------
-ipcRenderer.on(CHANNELS.STATE_CHANGED, (_e, state: AppState) => renderState(state));
-ipcRenderer.on(CHANNELS.GET_SHORTCUT_OK, (_e, ok: boolean) => renderShortcutOk(ok));
-ipcRenderer.on(CHANNELS.APP_ERROR, (_e, message: string) => showError(message));
-ipcRenderer.on(CHANNELS.HISTORY_CHANGED, (_e, items: HistoryItem[]) => {
+api.on(CHANNELS.STATE_CHANGED, (state: AppState) => renderState(state));
+api.on(CHANNELS.GET_SHORTCUT_OK, (ok: boolean) => renderShortcutOk(ok));
+api.on(CHANNELS.APP_ERROR, (message: string) => showError(message));
+api.on(CHANNELS.HISTORY_CHANGED, (items: HistoryItem[]) => {
   historyItems = items;
   renderHistory();
 });
@@ -415,13 +416,13 @@ ipcRenderer.on(CHANNELS.HISTORY_CHANGED, (_e, items: HistoryItem[]) => {
 // ---- init ---------------------------------------------------------------
 async function init(): Promise<void> {
   setupTabs();
-  currentSettings = await ipcRenderer.invoke(CHANNELS.GET_SETTINGS);
+  currentSettings = await api.invoke(CHANNELS.GET_SETTINGS);
   await populateDevices(currentSettings.inputDeviceId);
   renderSettings(currentSettings);
   await loadHistory();
 
-  renderState(await ipcRenderer.invoke(CHANNELS.GET_STATE));
-  renderShortcutOk(await ipcRenderer.invoke(CHANNELS.GET_SHORTCUT_OK));
+  renderState(await api.invoke(CHANNELS.GET_STATE));
+  renderShortcutOk(await api.invoke(CHANNELS.GET_SHORTCUT_OK));
 }
 
 void init();

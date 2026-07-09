@@ -1,4 +1,3 @@
-import { ipcRenderer } from 'electron';
 import { CHANNELS } from '../shared/types';
 
 const timerEl = document.getElementById('timer') as HTMLDivElement;
@@ -67,9 +66,9 @@ function drawLoop(): void {
   ctx.globalAlpha = 1;
 }
 
-ipcRenderer.on(CHANNELS.OVERLAY_SHOW, () => start());
-ipcRenderer.on(CHANNELS.OVERLAY_HIDE, () => stop());
-ipcRenderer.on(CHANNELS.OVERLAY_LEVEL, (_event, level: number) => pushLevel(level));
+window.whisper.on(CHANNELS.OVERLAY_SHOW, () => start());
+window.whisper.on(CHANNELS.OVERLAY_HIDE, () => stop());
+window.whisper.on(CHANNELS.OVERLAY_LEVEL, (level: number) => pushLevel(level));
 
 // Kick off the draw loop immediately; it's cheap and idles at low levels.
 drawLoop();

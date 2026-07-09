@@ -11,11 +11,10 @@ export function createRecorderWindow(): BrowserWindow {
     show: false,
     skipTaskbar: true,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      // Required: since Electron 20 renderers are sandboxed by default, which
-      // disables Node.js (require/__dirname) in the page even with
-      // nodeIntegration on. Without this the recorder script never loads.
+      // Secure model: no Node.js in the page; the preload exposes window.whisper.
+      preload: path.join(__dirname, '..', 'preload', 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
       sandbox: false,
       backgroundThrottling: false
     }
@@ -32,12 +31,17 @@ export function createRecorderWindow(): BrowserWindow {
   });
   win.webContents.session.setPermissionCheckHandler((_wc, permission) => isMediaPermission(permission));
 
+  // Pass ready-made file:// URLs for the start/stop sounds so the renderer
+  // needs no Node path handling.
+  const startSound = url.pathToFileURL(path.join(soundsDir, 'start.wav')).href;
+  const stopSound = url.pathToFileURL(path.join(soundsDir, 'stop.wav')).href;
+
   const htmlPath = path.join(__dirname, '..', 'renderer', 'recorder.html');
   const targetUrl = url.format({
     pathname: htmlPath,
     protocol: 'file:',
     slashes: true,
-    query: { soundsDir }
+    query: { startSound, stopSound }
   });
 
   win.loadURL(targetUrl);

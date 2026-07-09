@@ -62,11 +62,12 @@ function openSettingsWindow(): void {
     title: 'WhisperKey',
     backgroundColor: '#1e1f24',
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
-      // Required: renderers are sandboxed by default since Electron 20, which
-      // disables Node.js in the page and would make settings.js fail to load
-      // (dead buttons, empty UI). See recorder-window.ts for the same fix.
+      // Secure model: the renderer has no Node.js. All Electron/IPC access
+      // goes through the contextBridge API in preload.js. This avoids the
+      // "exports is not defined" class of failures from CommonJS in the page.
+      preload: path.join(__dirname, '..', 'preload', 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
       sandbox: false
     }
   });

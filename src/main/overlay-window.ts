@@ -35,8 +35,10 @@ export function createOverlayWindow(): BrowserWindow {
     focusable: false,
     hasShadow: false,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      // Secure model: no Node.js in the page; the preload exposes window.whisper.
+      preload: path.join(__dirname, '..', 'preload', 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
       sandbox: false,
       backgroundThrottling: false
     }

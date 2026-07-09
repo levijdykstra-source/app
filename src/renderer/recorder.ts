@@ -1,6 +1,3 @@
-import { ipcRenderer } from 'electron';
-import * as path from 'path';
-import * as url from 'url';
 import { CHANNELS } from '../shared/types';
 
 const TARGET_SAMPLE_RATE = 16000;
@@ -36,9 +33,9 @@ async function startRecording(options: RecordOptions = {}): Promise<void> {
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints });
 
     audioContext = new AudioContext();
-    // addModule needs a URL, not a raw filesystem path — a bare Windows path
-    // like "C:\...\recorder-worklet.js" is not a valid URL and fails to load.
-    const workletUrl = url.pathToFileURL(path.join(__dirname, 'recorder-worklet.js')).href;
+    // Resolve the worklet relative to this page's own file:// URL — works on
+    // Windows and macOS without any Node path handling in the renderer.
+    const workletUrl = new URL('recorder-worklet.js', window.location.href).href;
     await audioContext.audioWorklet.addModule(workletUrl);
 
     sourceNode = audioContext.createMediaStreamSource(mediaStream);
@@ -52,7 +49,7 @@ async function startRecording(options: RecordOptions = {}): Promise<void> {
     sourceNode.connect(workletNode);
     // Not connecting workletNode to destination avoids echoing mic audio to speakers.
   } catch (err) {
-    ipcRenderer.send(CHANNELS.RECORDER_ERROR, err instanceof Error ? err.message : String(err));
+    window.whisper.send(CHANNELS.RECORDER_ERROR, err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -66,7 +63,7 @@ function reportLevel(frame: Float32Array): void {
   for (let i = 0; i < frame.length; i++) sum += frame[i] * frame[i];
   const rms = Math.sqrt(sum / frame.length);
   // Scale up a bit — speech RMS is usually well below 1.
-  ipcRenderer.send(CHANNELS.AUDIO_LEVEL, Math.min(1, rms * 4));
+  window.whisper.send(CHANNELS.AUDIO_LEVEL, Math.min(1, rms * 4));
 }
 
 async function stopRecording(): Promise<void> {
@@ -89,14 +86,14 @@ async function stopRecording(): Promise<void> {
   // an instant start/stop). Report an error so the main process resets its
   // state instead of trying to transcribe silence — or worse, waiting forever.
   if (merged.length === 0) {
-    ipcRenderer.send(CHANNELS.RECORDER_ERROR, 'No audio was captured');
+    window.whisper.send(CHANNELS.RECORDER_ERROR, 'No audio was captured');
     return;
   }
 
   const resampled = resampleTo16k(merged, sourceSampleRate);
   const wavBuffer = encodeWav(resampled, TARGET_SAMPLE_RATE);
 
-  ipcRenderer.send(CHANNELS.AUDIO_DATA, wavBuffer);
+  window.whisper.send(CHANNELS.AUDIO_DATA, wavBuffer);
 }
 
 function mergeFrames(frames: Float32Array[]): Float32Array {
@@ -163,14 +160,16 @@ function writeString(view: DataView, offset: number, str: string): void {
 }
 
 function initSoundSources(): void {
-  const soundsDir = new URLSearchParams(window.location.search).get('soundsDir');
-  if (!soundsDir) return;
+  // The main process passes ready-made file:// URLs for the sounds via the
+  // page query string, so the renderer needs no Node path handling.
+  const params = new URLSearchParams(window.location.search);
+  const startUrl = params.get('startSound');
+  const stopUrl = params.get('stopSound');
 
   const startAudio = document.getElementById('sound-start') as HTMLAudioElement | null;
   const stopAudio = document.getElementById('sound-stop') as HTMLAudioElement | null;
-  // Use file:// URLs so the paths resolve correctly on Windows too.
-  if (startAudio) startAudio.src = url.pathToFileURL(path.join(soundsDir, 'start.wav')).href;
-  if (stopAudio) stopAudio.src = url.pathToFileURL(path.join(soundsDir, 'stop.wav')).href;
+  if (startAudio && startUrl) startAudio.src = startUrl;
+  if (stopAudio && stopUrl) stopAudio.src = stopUrl;
 }
 
 function playSound(name: 'start' | 'stop'): void {
@@ -182,14 +181,14 @@ function playSound(name: 'start' | 'stop'): void {
 
 initSoundSources();
 
-ipcRenderer.on(CHANNELS.START_RECORDING, (_event, options?: RecordOptions) => {
+window.whisper.on(CHANNELS.START_RECORDING, (options?: RecordOptions) => {
   void startRecording(options);
 });
 
-ipcRenderer.on(CHANNELS.STOP_RECORDING, () => {
+window.whisper.on(CHANNELS.STOP_RECORDING, () => {
   void stopRecording();
 });
 
-ipcRenderer.on(CHANNELS.PLAY_SOUND, (_event, name: 'start' | 'stop') => {
+window.whisper.on(CHANNELS.PLAY_SOUND, (name: 'start' | 'stop') => {
   playSound(name);
 });

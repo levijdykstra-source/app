@@ -107,13 +107,25 @@ src/
     notify.ts           native notifications
     logger.ts           local debug log file
     tray.ts, shortcut-manager.ts
-  renderer/
-    settings.html/.ts   Home + Settings tabbed UI
-    recorder.html/.ts    mic capture, resampling, WAV encoding, audio levels
-    overlay.html/.ts     recording pill (timer + waveform)
+  preload/preload.ts     contextBridge — exposes a minimal window.whisper API
+  renderer/              runs with contextIsolation ON / nodeIntegration OFF;
+    settings.html/.ts     Home + Settings tabbed UI
+    recorder.html/.ts     mic capture, resampling, WAV encoding, audio levels
+    overlay.html/.ts      recording pill (timer + waveform)
   shared/types.ts        settings, IPC channels, model metadata, history types
-scripts/         placeholder sound/icon generators, asset copier
+scripts/
+  build-renderer.js      esbuild: bundles renderer TS into browser IIFEs
+  copy-assets.js         copies HTML/CSS/worklet into dist
 ```
+
+### Build model
+
+The main process and preload are compiled to CommonJS by `tsc`
+(`tsconfig.main.json`). The **renderer** is bundled by **esbuild** into
+self-contained browser IIFEs — it contains no CommonJS (`require`/`exports`)
+and no Node.js APIs. Renderer code reaches Electron only through the
+`window.whisper` bridge set up by the preload. This is what keeps the packaged
+app free of the "`exports is not defined`" class of errors.
 
 ## Notes, limitations & design choices
 

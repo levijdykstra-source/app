@@ -1,15 +1,15 @@
 {
   "name": "whisperkey",
   "productName": "WhisperKey",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Press a hotkey, speak, press it again — WhisperKey transcribes locally with Whisper (Transformers.js / ONNX) and pastes the text at your cursor.",
   "author": "WhisperKey",
   "license": "MIT",
   "private": true,
   "main": "dist/main/index.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/copy-assets.js",
-    "watch": "tsc -p tsconfig.json --watch",
+    "build": "tsc -p tsconfig.main.json && node scripts/build-renderer.js && node scripts/copy-assets.js",
+    "watch": "tsc -p tsconfig.main.json --watch",
     "start": "npm run build && electron .",
     "dist:mac": "npm run build && electron-builder --mac --publish never",
     "dist:win": "npm run build && electron-builder --win --publish never",
@@ -26,6 +26,7 @@
     "@types/node": "^20.14.0",
     "electron": "^31.0.0",
     "electron-builder": "^26.15.3",
+    "esbuild": "^0.28.1",
     "typescript": "^5.5.0"
   },
   "build": {
